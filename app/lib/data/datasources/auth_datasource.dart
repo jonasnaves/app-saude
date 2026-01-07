@@ -38,8 +38,12 @@ class AuthDataSource {
       throw Exception('Resposta do servidor não contém dados do usuário');
     }
 
-    // Cookies são gerenciados automaticamente pelo navegador
     final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+    
+    // Armazenar sessionToken se fornecido
+    if (data['sessionToken'] != null) {
+      await apiService.setSessionToken(data['sessionToken'] as String);
+    }
 
     return {
       'user': user,
@@ -56,8 +60,12 @@ class AuthDataSource {
       },
     );
 
-    // Cookies são gerenciados automaticamente pelo navegador
     final user = UserModel.fromJson(response.data['user']);
+    
+    // Armazenar sessionToken se fornecido
+    if (response.data['sessionToken'] != null) {
+      await apiService.setSessionToken(response.data['sessionToken'] as String);
+    }
 
     return {
       'user': user,
@@ -66,7 +74,8 @@ class AuthDataSource {
 
   Future<void> logout() async {
     await apiService.post(ApiConstants.logout);
-    // Cookie será limpo pelo backend
+    // Limpar token local
+    await apiService.setSessionToken(null);
   }
 
   Future<UserModel> getCurrentUser() async {

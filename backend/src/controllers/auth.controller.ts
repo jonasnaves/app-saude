@@ -50,6 +50,7 @@ export const register = async (req: Request, res: Response) => {
         name: user.name,
         role: user.role,
       },
+      sessionToken: sessionToken, // Retornar token no body para Flutter armazenar
       message: 'Usuário criado com sucesso',
     });
   } catch (error: any) {
@@ -92,17 +93,19 @@ export const login = async (req: Request, res: Response) => {
     const sessionToken = await sessionService.createSession(user.id);
 
     // Definir cookie
-    // Para requisições cross-origin com withCredentials, precisamos usar sameSite: 'none' e secure: true
-    // Mas em desenvolvimento local sem HTTPS, alguns navegadores podem não aceitar
-    // Vamos tentar 'lax' primeiro, que funciona para navegação top-level
-    const isDevelopment = process.env.NODE_ENV !== 'production';
+    // Para requisições cross-origin, precisamos usar sameSite: 'none' e secure: false em dev
+    // Em produção com HTTPS, usar secure: true
+    const isProduction = process.env.NODE_ENV === 'production';
+    const origin = req.headers.origin || '';
+    const isCrossOrigin = origin && !origin.includes('localhost') && !origin.includes('127.0.0.1');
+    
     res.cookie('session_token', sessionToken, {
       httpOnly: true,
-      secure: false, // false em desenvolvimento (localhost não usa HTTPS)
-      sameSite: isDevelopment ? 'lax' : 'none', // 'lax' para dev, 'none' para produção
+      secure: isProduction, // true em produção (HTTPS), false em dev
+      sameSite: isCrossOrigin ? 'none' : 'lax', // 'none' para cross-origin, 'lax' para same-origin
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
       path: '/',
-      // Não definir domain para permitir que funcione em qualquer porta do localhost
+      // Não definir domain para permitir cross-origin
     });
     
     console.log('[Auth] Cookie definido:', { 
@@ -118,6 +121,7 @@ export const login = async (req: Request, res: Response) => {
         name: user.name,
         role: user.role,
       },
+      sessionToken: sessionToken, // Retornar token no body para Flutter armazenar
       message: 'Login realizado com sucesso',
     });
   } catch (error: any) {

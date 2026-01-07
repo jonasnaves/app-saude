@@ -13,16 +13,22 @@ const app = express();
 // Middlewares
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir todas as origens localhost em desenvolvimento
-    if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    // Permitir todas as origens localhost em desenvolvimento e requisições sem origin (mobile apps)
+    if (!origin || 
+        origin.startsWith('http://localhost:') || 
+        origin.startsWith('http://127.0.0.1:') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Em produção, permitir apenas origens específicas
+      callback(null, true); // Temporariamente permitir todas para debug
     }
   },
   credentials: true, // Permitir cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie'],
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' })); // Aumentar limite para chunks de áudio

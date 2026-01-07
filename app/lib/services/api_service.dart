@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/api_constants.dart';
 
 // Importação condicional para BrowserHttpClientAdapter apenas em web
@@ -7,8 +8,11 @@ import 'package:dio/browser.dart' if (dart.library.io) 'package:dio/io.dart' as 
 
 class ApiService {
   late Dio _dio;
+  String? _sessionToken;
+  bool _tokenLoaded = false;
+  final Future<void> _tokenLoadFuture;
 
-  ApiService() {
+  ApiService() : _tokenLoadFuture = _loadSessionToken() {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConstants.baseUrl,
       headers: {
@@ -29,15 +33,60 @@ class ApiService {
       }
     }
 
-    // Interceptor para garantir que cookies sejam enviados
+    // Interceptor para adicionar token de autenticação
     _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        // Em Flutter Web, os cookies são enviados automaticamente pelo navegador
-        // mas precisamos garantir que a requisição seja feita com credentials
+      onRequest: (options, handler) async {
+        // Garantir que o token seja carregado antes da requisição
+        if (!_tokenLoaded) {
+          await _tokenLoadFuture;
+        }
+        
         options.headers['Content-Type'] = 'application/json';
+        
+        // Adicionar token de autenticação se disponível
+        if (_sessionToken != null) {
+          options.headers['Authorization'] = 'Bearer $_sessionToken';
+          print('[ApiService] Token enviado no header Authorization: ${_sessionToken!.substring(0, 10)}...');
+        } else {
+          print('[ApiService] Nenhum token disponível para enviar');
+        }
+        
         handler.next(options);
       },
     ));
+  }
+
+  Future<void> _loadSessionToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _sessionToken = prefs.getString('session_token');
+      _tokenLoaded = true;
+      if (_sessionToken != null) {
+        print('[ApiService] Token carregado do SharedPreferences: ${_sessionToken!.substring(0, 10)}...');
+      } else {
+        print('[ApiService] Nenhum token encontrado no SharedPreferences');
+      }
+    } catch (e) {
+      print('[ApiService] Erro ao carregar session token: $e');
+      _tokenLoaded = true; // Marcar como carregado mesmo em caso de erro
+    }
+  }
+
+  Future<void> setSessionToken(String? token) async {
+    _sessionToken = token;
+    _tokenLoaded = true; // Marcar como carregado após definir o token
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (token != null) {
+        await prefs.setString('session_token', token);
+        print('[ApiService] Token salvo no SharedPreferences: ${token.substring(0, 10)}...');
+      } else {
+        await prefs.remove('session_token');
+        print('[ApiService] Token removido do SharedPreferences');
+      }
+    } catch (e) {
+      print('[ApiService] Erro ao salvar session token: $e');
+    }
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) {
@@ -58,4 +107,3 @@ class ApiService {
 
   String get baseUrl => ApiConstants.baseUrl;
 }
-

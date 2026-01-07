@@ -24,17 +24,28 @@ export const authMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Buscar session token do cookie
-    const sessionToken = req.cookies?.session_token;
+    // Buscar session token do cookie ou do header Authorization
+    let sessionToken = req.cookies?.session_token;
+    
+    // Se não tiver cookie, tentar pegar do header Authorization
+    if (!sessionToken) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        sessionToken = authHeader.substring(7);
+      }
+    }
 
     console.log('[AuthMiddleware] Verificando autenticação:', {
-      hasCookie: !!sessionToken,
-      cookies: Object.keys(req.cookies || {}),
+      hasCookie: !!req.cookies?.session_token,
+      hasAuthHeader: !!req.headers.authorization,
+      authHeaderValue: req.headers.authorization ? req.headers.authorization.substring(0, 20) + '...' : null,
+      hasSessionToken: !!sessionToken,
       origin: req.headers.origin,
+      allHeaders: Object.keys(req.headers),
     });
 
     if (!sessionToken) {
-      console.log('[AuthMiddleware] Cookie não encontrado');
+      console.log('[AuthMiddleware] Token não encontrado (cookie ou header)');
       res.status(401).json({ error: 'Não autenticado' });
       return;
     }
@@ -67,7 +78,17 @@ export const optionalAuthMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const sessionToken = req.cookies?.session_token;
+    // Buscar session token do cookie ou do header Authorization
+    let sessionToken = req.cookies?.session_token;
+    
+    // Se não tiver cookie, tentar pegar do header Authorization
+    if (!sessionToken) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        sessionToken = authHeader.substring(7);
+      }
+    }
+    
     if (sessionToken) {
       const session = await sessionService.getSession(sessionToken);
       if (session) {
