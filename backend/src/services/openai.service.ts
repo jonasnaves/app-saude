@@ -5,8 +5,11 @@ export class OpenAIService {
 
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY não configurada no ambiente');
+    if (!apiKey || apiKey === 'your-openai-api-key-here') {
+      console.warn('⚠️  OPENAI_API_KEY não configurada - funcionalidades de OpenAI desabilitadas');
+      // Não lançar erro, apenas avisar - permite que o backend inicie sem OpenAI
+      this.openai = null as any;
+      return;
     }
     this.openai = new OpenAI({ apiKey });
   }
