@@ -72,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     // Logo/Branding minimalista
                     const Text(
-                      'MedOS',
+                      'AiMe',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.w600,

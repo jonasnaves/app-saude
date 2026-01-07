@@ -71,7 +71,7 @@ class FCMService {
     const androidDetails = AndroidNotificationDetails(
       'fcm_channel',
       'FCM Notifications',
-      channelDescription: 'Notificações push do MedOS',
+      channelDescription: 'Notificações push do AiMe',
       importance: Importance.high,
       priority: Priority.high,
     );

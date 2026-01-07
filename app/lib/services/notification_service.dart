@@ -45,9 +45,9 @@ class NotificationService {
     if (!_initialized) await initialize();
 
     const androidDetails = AndroidNotificationDetails(
-      'medos_channel',
-      'MedOS Notifications',
-      channelDescription: 'Notificações do sistema MedOS',
+      'aime_channel',
+      'AiMe Notifications',
+      channelDescription: 'Notificações do sistema AiMe',
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -72,9 +72,9 @@ class NotificationService {
     if (!_initialized) await initialize();
 
     const androidDetails = AndroidNotificationDetails(
-      'medos_channel',
-      'MedOS Notifications',
-      channelDescription: 'Notificações do sistema MedOS',
+      'aime_channel',
+      'AiMe Notifications',
+      channelDescription: 'Notificações do sistema AiMe',
       importance: Importance.high,
       priority: Priority.high,
     );

@@ -6,18 +6,18 @@ import 'core/theme/app_theme.dart';
 void main() {
   runApp(
     const ProviderScope(
-      child: MedOSApp(),
+      child: AiMeApp(),
     ),
   );
 }
 
-class MedOSApp extends StatelessWidget {
-  const MedOSApp({super.key});
+class AiMeApp extends StatelessWidget {
+  const AiMeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'MedOS',
+      title: 'AiMe',
       theme: AppTheme.darkTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
