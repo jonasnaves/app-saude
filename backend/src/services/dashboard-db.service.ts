@@ -34,14 +34,14 @@ export class DashboardDBService {
 
       const consultationsTodayResult = await pool.query(
         `SELECT COUNT(*) FROM consultations 
-         WHERE started_at >= $1 AND started_at <= $2`,
+         WHERE "startedAt" >= $1 AND "startedAt" <= $2`,
         [todayStart, todayEndStr]
       );
       const consultationsToday = parseInt(consultationsTodayResult.rows[0]?.count || '0');
 
       // Consultas pendentes (não finalizadas)
       const pendingResult = await pool.query(
-        'SELECT COUNT(*) FROM consultations WHERE ended_at IS NULL'
+        'SELECT COUNT(*) FROM consultations WHERE "endedAt" IS NULL'
       );
       const pendingConsultations = parseInt(pendingResult.rows[0]?.count || '0');
 
@@ -56,12 +56,12 @@ export class DashboardDBService {
 
       const consultationsByDayResult = await pool.query(
         `SELECT 
-          TO_CHAR(started_at, 'Dy') as day,
+          TO_CHAR("startedAt", 'Dy') as day,
           COUNT(*) as count
          FROM consultations 
-         WHERE started_at >= $1
-         GROUP BY TO_CHAR(started_at, 'Dy'), DATE_PART('dow', started_at)
-         ORDER BY DATE_PART('dow', started_at)`,
+         WHERE "startedAt" >= $1
+         GROUP BY TO_CHAR("startedAt", 'Dy'), DATE_PART('dow', "startedAt")
+         ORDER BY DATE_PART('dow', "startedAt")`,
         [sevenDaysAgo.toISOString()]
       );
 
@@ -97,19 +97,19 @@ export class DashboardDBService {
       const recentResult = await pool.query(
         `SELECT 
           id,
-          patient_name,
-          started_at,
-          ended_at
+          "patientName",
+          "startedAt",
+          "endedAt"
          FROM consultations 
-         ORDER BY started_at DESC 
+         ORDER BY "startedAt" DESC 
          LIMIT 5`
       );
 
       const recentConsultations = recentResult.rows.map((row: any) => ({
         id: String(row.id),
-        patientName: row.patient_name ? String(row.patient_name) : null,
-        startedAt: new Date(row.started_at).toISOString(),
-        endedAt: row.ended_at ? new Date(row.ended_at).toISOString() : null,
+        patientName: row.patientName ? String(row.patientName) : null,
+        startedAt: new Date(row.startedAt).toISOString(),
+        endedAt: row.endedAt ? new Date(row.endedAt).toISOString() : null,
       }));
 
       return {

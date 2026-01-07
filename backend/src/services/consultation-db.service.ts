@@ -36,15 +36,16 @@ export class ConsultationDBService {
       patientNameType: typeof patientName,
     });
 
-    // Nota: A tabela consultations não tem campo user_id ainda
-    // Por enquanto, vamos usar created_by se existir, ou adicionar depois
+    // A tabela consultations usa camelCase: userId, patientName, startedAt
+    // Mas também tem patient_id (snake_case) que foi adicionado depois
+    // Precisamos usar aspas duplas para colunas camelCase no PostgreSQL
     const query = `
-      INSERT INTO consultations (patient_id, patient_name)
-      VALUES ($1, $2)
+      INSERT INTO consultations ("userId", "patientName", "patient_id", "startedAt")
+      VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
 
-    const params = [patientId || null, patientName || null];
+    const params = [userId || null, patientName || null, patientId || null, new Date()];
     console.log('[ConsultationDB] Executando INSERT com parâmetros:', {
       param1: params[0],
       param2: params[1],
@@ -110,14 +111,16 @@ export class ConsultationDBService {
     limit: number;
   }> {
     // Selecionar apenas campos necessários para listagem (excluir campos grandes)
+    // A tabela usa camelCase: userId, patientName, startedAt, endedAt, createdAt
+    // Mas também tem patient_id (snake_case)
     let query = `SELECT 
       id, 
+      "userId",
+      "patientName",
       patient_id, 
-      patient_name, 
-      started_at, 
-      ended_at, 
-      created_at, 
-      updated_at 
+      "startedAt", 
+      "endedAt", 
+      "createdAt"
     FROM consultations`;
     const params: any[] = [];
     let paramCount = 0;
@@ -138,7 +141,7 @@ export class ConsultationDBService {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += ' ORDER BY started_at DESC';
+    query += ' ORDER BY "startedAt" DESC';
     query += ` LIMIT $${++paramCount} OFFSET $${++paramCount}`;
     params.push(limit, (page - 1) * limit);
 
@@ -206,7 +209,7 @@ export class ConsultationDBService {
   async updateTranscript(consultationId: string, transcript: string): Promise<Consultation | null> {
     const query = `
       UPDATE consultations 
-      SET transcript = $1, updated_at = CURRENT_TIMESTAMP
+      SET transcript = $1
       WHERE id = $2
       RETURNING *
     `;
@@ -305,7 +308,7 @@ export class ConsultationDBService {
       values.push(consultationId);
       const query = `
         UPDATE consultations 
-        SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        SET ${updateFields.join(', ')}
         WHERE id = $${++paramCount}
         RETURNING *
       `;
@@ -345,7 +348,7 @@ export class ConsultationDBService {
   async updateDoctorNotes(consultationId: string, doctorNotes: string): Promise<Consultation | null> {
     const query = `
       UPDATE consultations 
-      SET doctor_notes = $1, updated_at = CURRENT_TIMESTAMP
+      SET doctor_notes = $1
       WHERE id = $2
       RETURNING *
     `;
@@ -363,7 +366,7 @@ export class ConsultationDBService {
   async updateChatMessages(consultationId: string, chatMessages: any[]): Promise<Consultation | null> {
     const query = `
       UPDATE consultations 
-      SET chat_messages = $1, updated_at = CURRENT_TIMESTAMP
+      SET chat_messages = $1
       WHERE id = $2
       RETURNING *
     `;
@@ -491,11 +494,11 @@ export class ConsultationDBService {
         return existingConsultation;
       }
 
-      // Adicionar consultationId e updated_at
+      // Adicionar consultationId
       values.push(consultationId);
       const query = `
         UPDATE consultations 
-        SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        SET ${updateFields.join(', ')}
         WHERE id = $${++paramCount}
         RETURNING *
       `;
@@ -544,15 +547,17 @@ export class ConsultationDBService {
    */
   private mapRowToConsultationList(row: any): Consultation {
     try {
-      const startedAt = row.started_at ? new Date(row.started_at).toISOString() : new Date().toISOString();
-      const endedAt = row.ended_at ? new Date(row.ended_at).toISOString() : undefined;
-      const createdAt = row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString();
-      const updatedAt = row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString();
+      // A tabela usa camelCase: startedAt, endedAt, createdAt
+      // Mas também pode ter updated_at (snake_case) do trigger
+      const startedAt = row.startedAt || row.started_at ? new Date(row.startedAt || row.started_at).toISOString() : new Date().toISOString();
+      const endedAt = row.endedAt || row.ended_at ? new Date(row.endedAt || row.ended_at).toISOString() : undefined;
+      const createdAt = row.createdAt || row.created_at ? new Date(row.createdAt || row.created_at).toISOString() : new Date().toISOString();
+      const updatedAt = row.updatedAt || row.updated_at ? new Date(row.updatedAt || row.updated_at).toISOString() : new Date().toISOString();
 
       return {
         id: String(row.id || ''),
         patientId: row.patient_id ? String(row.patient_id) : undefined,
-        patientName: row.patient_name ? String(row.patient_name) : undefined,
+        patientName: row.patientName || row.patient_name ? String(row.patientName || row.patient_name) : undefined,
         // Campos grandes não são retornados na listagem para economizar memória
         transcript: '',
         summary: undefined,
@@ -582,7 +587,7 @@ export class ConsultationDBService {
   async endConsultation(consultationId: string): Promise<Consultation | null> {
     const query = `
       UPDATE consultations 
-      SET ended_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      SET "endedAt" = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
     `;
@@ -600,7 +605,7 @@ export class ConsultationDBService {
   async resumeConsultation(consultationId: string): Promise<Consultation | null> {
     const query = `
       UPDATE consultations 
-      SET ended_at = NULL, updated_at = CURRENT_TIMESTAMP
+      SET "endedAt" = NULL
       WHERE id = $1
       RETURNING *
     `;
@@ -668,10 +673,12 @@ export class ConsultationDBService {
       let updatedAt: string = '';
 
       try {
-        startedAt = row.started_at ? new Date(row.started_at).toISOString() : new Date().toISOString();
-        endedAt = row.ended_at ? new Date(row.ended_at).toISOString() : undefined;
-        createdAt = row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString();
-        updatedAt = row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString();
+        // A tabela usa camelCase: startedAt, endedAt, createdAt
+        // Mas também pode ter updated_at (snake_case)
+        startedAt = row.startedAt || row.started_at ? new Date(row.startedAt || row.started_at).toISOString() : new Date().toISOString();
+        endedAt = row.endedAt || row.ended_at ? new Date(row.endedAt || row.ended_at).toISOString() : undefined;
+        createdAt = row.createdAt || row.created_at ? new Date(row.createdAt || row.created_at).toISOString() : new Date().toISOString();
+        updatedAt = row.updatedAt || row.updated_at ? new Date(row.updatedAt || row.updated_at).toISOString() : new Date().toISOString();
       } catch (error) {
         console.error('[ConsultationDB] Erro ao parsear timestamps:', error);
         const now = new Date().toISOString();
@@ -711,7 +718,7 @@ export class ConsultationDBService {
       return {
         id: String(row.id || ''),
         patientId: row.patient_id ? String(row.patient_id) : undefined,
-        patientName: row.patient_name ? String(row.patient_name) : undefined,
+        patientName: row.patientName || row.patient_name ? String(row.patientName || row.patient_name) : undefined,
         transcript: row.transcript ? String(row.transcript) : '',
         summary: row.summary ? String(row.summary) : undefined,
         anamnesis: row.anamnesis ? String(row.anamnesis) : undefined,
