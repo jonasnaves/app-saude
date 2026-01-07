@@ -32,7 +32,7 @@ class DashboardChartWidget extends StatelessWidget {
                       child: Text(
                         data[index]['name'],
                         style: const TextStyle(
-                          color: AppColors.slateLight,
+                          color: AppColors.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -71,7 +71,7 @@ class DashboardChartWidget extends StatelessWidget {
             horizontalInterval: 5,
             getDrawingHorizontalLine: (value) {
               return FlLine(
-                color: AppColors.slate700,
+                color: AppColors.border,
                 strokeWidth: 1,
               );
             },
@@ -87,7 +87,7 @@ class DashboardChartWidget extends StatelessWidget {
               barRods: [
                 BarChartRodData(
                   toY: (item['total'] as num).toDouble(),
-                  color: AppColors.electricBlue,
+                  color: AppColors.primary,
                   width: 20,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(4),
@@ -99,6 +99,15 @@ class DashboardChartWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  double _calculateMaxY() {
+    if (data.isEmpty) return 10;
+    final maxValue = data
+        .map((item) => (item['total'] as num).toDouble())
+        .reduce((a, b) => a > b ? a : b);
+    // Arredondar para cima para o próximo múltiplo de 5
+    return (maxValue / 5).ceil() * 5.0 + 5;
   }
 }
 

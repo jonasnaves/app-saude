@@ -6,23 +6,22 @@ class SupportDataSource {
 
   SupportDataSource(this.apiService);
 
-  Future<String> sendMessage(String message, String mode) async {
+  Future<String> chatWithAI({
+    required String mode,
+    required String message,
+    required List<Map<String, String>> chatHistory,
+    Map<String, dynamic>? context,
+  }) async {
     final response = await apiService.post(
       ApiConstants.supportChat,
       data: {
-        'message': message,
         'mode': mode,
+        'message': message,
+        'chatHistory': chatHistory,
+        if (context != null) 'context': context,
       },
     );
-    return response.data['response'];
-  }
 
-  Future<List<dynamic>> getChatHistory({String? mode}) async {
-    final response = await apiService.get(
-      ApiConstants.supportHistory,
-      queryParameters: mode != null ? {'mode': mode} : null,
-    );
-    return response.data;
+    return response.data['response'] as String;
   }
 }
-

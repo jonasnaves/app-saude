@@ -1,13 +1,14 @@
 import { Router } from 'express';
+import * as dashboardController from '../controllers/dashboard.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { getStats, getSchedule } from '../controllers/dashboard.controller';
 
 const router = Router();
 
+// Aplicar middleware de autenticação em todas as rotas
 router.use(authMiddleware);
 
-router.get('/stats', getStats);
-router.get('/schedule', getSchedule);
+// Endpoint para estatísticas do dashboard
+router.get('/stats', dashboardController.getDashboardStats);
 
 export default router;
 

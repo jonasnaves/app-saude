@@ -1,35 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { Consultation } from './Consultation';
-import { SupportChat } from './SupportChat';
-import { Transaction } from './Transaction';
-
-@Entity('users')
-export class User {
-  @PrimaryGeneratedColumn('uuid')
+export interface User {
   id: string;
-
-  @Column()
-  name: string;
-
-  @Column({ unique: true })
   email: string;
-
-  @Column()
-  passwordHash: string;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  credits: number;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @OneToMany(() => Consultation, consultation => consultation.user)
-  consultations: Consultation[];
-
-  @OneToMany(() => SupportChat, chat => chat.user)
-  supportChats: SupportChat[];
-
-  @OneToMany(() => Transaction, transaction => transaction.user)
-  transactions: Transaction[];
+  name: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+  // password_hash nunca é retornado
 }
+
+export interface UserWithPassword extends User {
+  passwordHash: string; // Apenas para uso interno
+}
+
 

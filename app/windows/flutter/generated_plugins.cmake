@@ -3,10 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  connectivity_plus
-  firebase_core
-  permission_handler_windows
-  record_windows
+  printing
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

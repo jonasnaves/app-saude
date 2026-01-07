@@ -1,46 +1,39 @@
 import { Request, Response } from 'express';
-import { AppDataSource } from '../config/database';
-import { Consultation } from '../models/Consultation';
-import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
+import { DashboardDBService } from '../services/dashboard-db.service';
 
-export const getStats = async (req: AuthRequest, res: Response) => {
+const dashboardDB = new DashboardDBService();
+
+/**
+ * GET /api/dashboard/stats
+ * Retorna estatísticas do dashboard
+ */
+export const getDashboardStats = async (req: Request, res: Response) => {
   try {
-    const consultationRepository = AppDataSource.getRepository(Consultation);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const userId = req.userId; // Do middleware de autenticação
 
-    const consultationsToday = await consultationRepository
-      .createQueryBuilder('consultation')
-      .where('consultation.userId = :userId', { userId: req.user!.id })
-      .andWhere('consultation.startedAt >= :today', { today })
-      .getCount();
+    console.log('[DashboardController] getDashboardStats chamado:', { userId });
 
-    // Estatísticas mockadas - pode ser expandido com dados reais
-    const stats = {
-      patientsToday: consultationsToday,
-      pending: 3,
-      estimatedEarnings: 4200,
-      shifts: 1,
-    };
+    const stats = await dashboardDB.getDashboardStats(userId);
+
+    console.log('[DashboardController] Estatísticas obtidas:', {
+      totalPatients: stats.totalPatients,
+      consultationsToday: stats.consultationsToday,
+      pendingConsultations: stats.pendingConsultations,
+      totalConsultations: stats.totalConsultations,
+      consultationsByDayCount: stats.consultationsByDay.length,
+      recentConsultationsCount: stats.recentConsultations.length,
+    });
 
     res.json(stats);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar estatísticas' });
-  }
-};
-
-export const getSchedule = async (req: AuthRequest, res: Response) => {
-  try {
-    // Mock data - pode ser expandido com sistema de agendamento real
-    const schedule = [
-      { id: '1', name: 'Ana Silva', lastVisit: '2024-05-10', nextAppointment: '14:30' },
-      { id: '2', name: 'João Pereira', lastVisit: '2024-04-22', nextAppointment: '15:15' },
-      { id: '3', name: 'Maria Santos', lastVisit: '2024-05-12', nextAppointment: '16:00' },
-    ];
-
-    res.json(schedule);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar agenda' });
+  } catch (error: any) {
+    console.error('[DashboardController] Erro ao obter estatísticas:', {
+      error: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({
+      error: 'Erro ao obter estatísticas do dashboard',
+      message: error.message,
+    });
   }
 };
 

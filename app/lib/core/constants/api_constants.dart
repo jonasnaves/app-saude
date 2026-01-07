@@ -8,15 +8,30 @@ class ApiConstants {
   // Auth endpoints
   static const String login = '/auth/login';
   static const String register = '/auth/register';
-  static const String refreshToken = '/auth/refresh';
+  static const String logout = '/auth/logout';
+  static const String me = '/auth/me';
   
   // Clinical endpoints
   static const String startRecording = '/clinical/start-recording';
   static const String processChunk = '/clinical/process-chunk';
   static const String transcribe = '/clinical/transcribe';
+  static const String transcribeChunk = '/clinical/transcribe-chunk';
   static const String analyzeIncremental = '/clinical/analyze-incremental';
   static const String generateSummary = '/clinical/generate-summary';
+  static const String processCascade = '/clinical/process-cascade';
+  static const String chat = '/clinical/chat';
   static const String consultations = '/clinical/consultations';
+  static const String saveMedicalRecord = '/clinical/save-medical-record';
+  static const String finishConsultation = '/clinical/finish-consultation';
+  static const String resumeConsultation = '/clinical/resume-consultation';
+  
+  // Patient endpoints
+  static const String patients = '/patients';
+  static String patientById(String id) => '/patients/$id';
+  static String patientPhotos(String id) => '/patients/$id/photos';
+  static String patientPhoto(String id, String photoId) => '/patients/$id/photos/$photoId';
+  static String patientDocuments(String id) => '/patients/$id/documents';
+  static String patientDocument(String id, String docId) => '/patients/$id/documents/$docId';
   
   // Support endpoints
   static const String supportChat = '/support/chat';

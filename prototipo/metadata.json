@@ -1,8 +1,0 @@
-
-{
-  "name": "MedOS - The Medical Super App",
-  "description": "An all-in-one platform for physicians covering clinical scribing, medical support AI, and career management.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
-}

@@ -17,7 +17,7 @@ class RecordingFAB extends StatelessWidget {
           context.go('/clinical/recording');
         }
       },
-      backgroundColor: isRecording ? AppColors.red500 : AppColors.electricBlue,
+      backgroundColor: isRecording ? AppColors.error : AppColors.primary,
       child: isRecording
           ? const Icon(Icons.stop, color: Colors.white)
           : const Icon(Icons.mic, color: Colors.white),

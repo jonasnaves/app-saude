@@ -1,0 +1,22 @@
+
+# Environment files
+.env
+.env.local
+.env.*.local
+**/.env
+**/docker/.env
+.env
+.env.local
+.env.*.local
+**/.env
+**/docker/.env
+
+# Dependencies
+**/node_modules/
+node_modules/
+**/dist/
+dist/
+
+# System
+
+.DS_Store

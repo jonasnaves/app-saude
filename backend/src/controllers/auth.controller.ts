@@ -1,169 +1,188 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { AppDataSource } from '../config/database';
-import { User } from '../models/User';
-import { z } from 'zod';
+import { AuthService } from '../services/auth.service';
+import { SessionService } from '../services/session.service';
 
-const registerSchema = z.object({
-  name: z.string().min(3),
-  email: z.string().email(),
-  password: z.string().min(6),
-});
+const authService = new AuthService();
+const sessionService = new SessionService();
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
+/**
+ * POST /api/auth/register
+ * Registra um novo usuário
+ */
 export const register = async (req: Request, res: Response) => {
   try {
-    const data = registerSchema.parse(req.body);
-    const userRepository = AppDataSource.getRepository(User);
+    const { email, password, name, role } = req.body;
 
-    const existingUser = await userRepository.findOne({
-      where: { email: data.email },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email já cadastrado' });
+    // Validação básica
+    if (!email || !password || !name) {
+      return res.status(400).json({
+        error: 'Email, senha e nome são obrigatórios',
+      });
     }
 
-    const passwordHash = await bcrypt.hash(data.password, 10);
-    const user = userRepository.create({
-      name: data.name,
-      email: data.email,
-      passwordHash,
-      credits: 0,
+    // Verificar se email já existe
+    const existingUser = await authService.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({
+        error: 'Email já cadastrado',
+      });
+    }
+
+    // Criar usuário
+    const user = await authService.createUser(email, password, name, role || 'user');
+
+    // Criar session
+    const sessionToken = await sessionService.createSession(user.id);
+
+    // Definir cookie
+    res.cookie('session_token', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' para permitir cross-origin em dev
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      path: '/',
     });
-
-    await userRepository.save(user);
-
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
-    );
-
-    const refreshToken = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' } as jwt.SignOptions
-    );
 
     res.status(201).json({
       user: {
         id: user.id,
-        name: user.name,
         email: user.email,
-        credits: user.credits,
+        name: user.name,
+        role: user.role,
       },
-      token,
-      refreshToken,
+      message: 'Usuário criado com sucesso',
     });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos', details: error.issues });
-    }
-    res.status(500).json({ error: 'Erro ao registrar usuário' });
+  } catch (error: any) {
+    console.error('Erro ao registrar usuário:', error);
+    res.status(500).json({
+      error: 'Erro ao registrar usuário',
+      message: error.message,
+    });
   }
 };
 
+/**
+ * POST /api/auth/login
+ * Autentica um usuário
+ */
 export const login = async (req: Request, res: Response) => {
   try {
-    const data = loginSchema.parse(req.body);
-    const userRepository = AppDataSource.getRepository(User);
+    const { email, password } = req.body;
 
-    const user = await userRepository.findOne({
-      where: { email: data.email },
-    });
+    console.log('[Auth] Tentativa de login:', { email, hasPassword: !!password });
 
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Email e senha são obrigatórios',
+      });
+    }
+
+    // Validar credenciais
+    const user = await authService.validateCredentials(email, password);
     if (!user) {
-      return res.status(401).json({ error: 'Email ou senha inválidos' });
+      console.log('[Auth] Credenciais inválidas para:', email);
+      return res.status(401).json({
+        error: 'Credenciais inválidas',
+      });
     }
 
-    const isValidPassword = await bcrypt.compare(data.password, user.passwordHash);
+    console.log('[Auth] Login bem-sucedido para:', email);
 
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Email ou senha inválidos' });
-    }
+    // Criar session
+    const sessionToken = await sessionService.createSession(user.id);
 
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
-    );
-
-    const refreshToken = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' } as jwt.SignOptions
-    );
+    // Definir cookie
+    // Para requisições cross-origin com withCredentials, precisamos usar sameSite: 'none' e secure: true
+    // Mas em desenvolvimento local sem HTTPS, alguns navegadores podem não aceitar
+    // Vamos tentar 'lax' primeiro, que funciona para navegação top-level
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    res.cookie('session_token', sessionToken, {
+      httpOnly: true,
+      secure: false, // false em desenvolvimento (localhost não usa HTTPS)
+      sameSite: isDevelopment ? 'lax' : 'none', // 'lax' para dev, 'none' para produção
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      path: '/',
+      // Não definir domain para permitir que funcione em qualquer porta do localhost
+    });
+    
+    console.log('[Auth] Cookie definido:', { 
+      sessionToken: sessionToken.substring(0, 10) + '...',
+      sameSite: isDevelopment ? 'lax' : 'none',
+      secure: false,
+    });
 
     res.json({
       user: {
         id: user.id,
-        name: user.name,
         email: user.email,
-        credits: user.credits,
+        name: user.name,
+        role: user.role,
       },
-      token,
-      refreshToken,
+      message: 'Login realizado com sucesso',
     });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos', details: error.issues });
-    }
-    res.status(500).json({ error: 'Erro ao fazer login' });
+  } catch (error: any) {
+    console.error('Erro ao fazer login:', error);
+    res.status(500).json({
+      error: 'Erro ao fazer login',
+      message: error.message,
+    });
   }
 };
 
-const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1),
-});
-
-export const refreshToken = async (req: Request, res: Response) => {
+/**
+ * POST /api/auth/logout
+ * Encerra a session do usuário
+ */
+export const logout = async (req: Request, res: Response) => {
   try {
-    const data = refreshTokenSchema.parse(req.body);
-    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!;
+    const sessionToken = req.cookies?.session_token;
 
-    let decoded: { userId: string };
-    try {
-      decoded = jwt.verify(data.refreshToken, refreshSecret) as { userId: string };
-    } catch (error) {
-      return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+    if (sessionToken) {
+      await sessionService.destroySession(sessionToken);
     }
 
-    const userRepository = AppDataSource.getRepository(User);
-    const user = await userRepository.findOne({
-      where: { id: decoded.userId },
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Usuário não encontrado' });
-    }
-
-    const newToken = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
-    );
-
-    const newRefreshToken = jwt.sign(
-      { userId: user.id },
-      refreshSecret,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' } as jwt.SignOptions
-    );
+    // Limpar cookie
+    res.clearCookie('session_token');
 
     res.json({
-      token: newToken,
-      refreshToken: newRefreshToken,
+      message: 'Logout realizado com sucesso',
     });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos', details: error.issues });
+  } catch (error: any) {
+    console.error('Erro ao fazer logout:', error);
+    res.status(500).json({
+      error: 'Erro ao fazer logout',
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * GET /api/auth/me
+ * Retorna informações do usuário atual
+ */
+export const getCurrentUser = async (req: Request, res: Response) => {
+  try {
+    // O middleware de autenticação já adicionou req.user
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Não autenticado',
+      });
     }
-    res.status(500).json({ error: 'Erro ao renovar token' });
+
+    res.json({
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name,
+        role: req.user.role,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao obter usuário atual:', error);
+    res.status(500).json({
+      error: 'Erro ao obter usuário atual',
+      message: error.message,
+    });
   }
 };
 

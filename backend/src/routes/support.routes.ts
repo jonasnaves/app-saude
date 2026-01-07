@@ -1,13 +1,15 @@
-import { Router } from 'express';
+import express from 'express';
+import { chatWithAI } from '../controllers/support.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { sendMessage, getChatHistory } from '../controllers/support.controller';
 
-const router = Router();
+const router = express.Router();
 
-router.use(authMiddleware);
-
-router.post('/chat', sendMessage);
-router.get('/history', getChatHistory);
+/**
+ * POST /api/support/chat
+ * Chat com IA usando contexto do modo selecionado
+ */
+router.post('/chat', authMiddleware, chatWithAI);
 
 export default router;
+
 

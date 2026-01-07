@@ -1,86 +1,50 @@
 import { Request, Response } from 'express';
-import { AppDataSource } from '../config/database';
-import { SupportChat, SupportMode } from '../models/SupportChat';
-import { geminiService } from '../services/gemini.service';
-import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
-import { z } from 'zod';
+import { OpenAIService } from '../services/openai.service';
 
-const chatSchema = z.object({
-  message: z.string().min(1),
-  mode: z.enum(['medical', 'legal', 'marketing']),
-});
+const openaiService = new OpenAIService();
 
-export const sendMessage = async (req: AuthRequest, res: Response) => {
+/**
+ * POST /api/support/chat
+ * Chat com IA usando contexto do modo selecionado
+ */
+export const chatWithAI = async (req: Request, res: Response) => {
   try {
-    const data = chatSchema.parse(req.body);
-    const supportChatRepository = AppDataSource.getRepository(SupportChat);
+    const { mode, message, chatHistory, context } = req.body;
 
-    // Buscar ou criar chat
-    let chat = await supportChatRepository.findOne({
-      where: {
-        userId: req.user!.id,
-        mode: data.mode as SupportMode,
-      },
-      order: { createdAt: 'DESC' },
+    console.log('[SupportController] Chat com IA:', {
+      mode,
+      messageLength: message?.length || 0,
+      chatHistoryLength: chatHistory?.length || 0,
+      hasContext: !!context,
     });
 
-    if (!chat) {
-      chat = supportChatRepository.create({
-        userId: req.user!.id,
-        mode: data.mode as SupportMode,
-        messages: [],
-      });
+    // Validação de entrada
+    if (!mode || typeof mode !== 'string') {
+      return res.status(400).json({ error: 'mode é obrigatório e deve ser uma string' });
     }
 
-    // Adicionar mensagem do usuário
-    chat.messages.push({
-      role: 'user',
-      text: data.message,
-      timestamp: new Date(),
-    });
-
-    // Obter resposta da IA
-    const aiResponse = await geminiService.getSupportResponse(data.message, data.mode);
-
-    // Adicionar resposta da IA
-    chat.messages.push({
-      role: 'bot',
-      text: aiResponse,
-      timestamp: new Date(),
-    });
-
-    await supportChatRepository.save(chat);
-
-    res.json({
-      response: aiResponse,
-      chatId: chat.id,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Dados inválidos' });
-    }
-    res.status(500).json({ error: 'Erro ao processar mensagem' });
-  }
-};
-
-export const getChatHistory = async (req: AuthRequest, res: Response) => {
-  try {
-    const { mode } = req.query;
-    const supportChatRepository = AppDataSource.getRepository(SupportChat);
-
-    const where: any = { userId: req.user!.id };
-    if (mode) {
-      where.mode = mode;
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ error: 'message é obrigatório e não pode estar vazio' });
     }
 
-    const chats = await supportChatRepository.find({
-      where,
-      order: { createdAt: 'DESC' },
-    });
+    // Validar chatHistory
+    const history = Array.isArray(chatHistory) ? chatHistory : [];
 
-    res.json(chats);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar histórico' });
+    // Chamar serviço de chat com contexto
+    const response = await openaiService.chatWithHubContext(
+      mode,
+      message,
+      history,
+      context
+    );
+
+    res.json({ response });
+  } catch (error: any) {
+    console.error('[SupportController] Erro no chat com IA:', error);
+    res.status(500).json({
+      error: 'Erro ao processar chat',
+      message: error.message,
+    });
   }
 };
 

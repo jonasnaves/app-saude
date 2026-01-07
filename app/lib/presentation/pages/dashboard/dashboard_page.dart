@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/colors.dart';
-import '../../widgets/bottom_nav_bar.dart';
-import '../../widgets/floating_action_button.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/datasources/dashboard_datasource.dart';
+import '../../../services/api_service.dart';
+import '../../widgets/app_layout.dart';
 import '../../widgets/dashboard_chart_widget.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -13,214 +15,310 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  final DashboardDataSource _dashboardDataSource = DashboardDataSource(ApiService());
+  
+  Map<String, dynamic>? _stats;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final stats = await _dashboardDataSource.getStats();
+      
+      if (mounted) {
+        setState(() {
+          _stats = stats;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Erro ao carregar estatísticas: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.deepNavy,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
+    return AppLayout(
+      currentRoute: '/dashboard',
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                    // Header minimalista
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Olá, Dr. Carvalho',
                               style: TextStyle(
                                 fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              'Resumo do seu dia: 14 de Maio',
+                              'Resumo do seu dia',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.slateLight,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],
                         ),
                         Container(
-                          width: 40,
-                          height: 40,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
-                            color: AppColors.electricBlue.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.electricBlue),
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: AppColors.border, width: 1),
                           ),
                           child: const Center(
                             child: Text(
                               'DC',
                               style: TextStyle(
-                                color: AppColors.electricBlue,
-                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    // Stats Cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Pacientes Hoje',
-                            value: '18',
-                            icon: Icons.people,
-                            color: AppColors.electricBlue,
-                          ),
+                    const SizedBox(height: 32),
+                    // Stats Cards - Grid 2x2
+                    if (_isLoading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (_error != null)
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                            const SizedBox(height: 16),
+                            Text(
+                              _error!,
+                              style: const TextStyle(color: AppColors.textSecondary),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _loadStats,
+                              child: const Text('Tentar novamente'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Pendências',
-                            value: '3',
-                            icon: Icons.description,
-                            color: AppColors.yellow400,
+                      )
+                    else if (_stats != null) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Total de Pacientes',
+                              value: '${_stats!['totalPatients'] ?? 0}',
+                              icon: Icons.people,
+                              color: AppColors.primary,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Ganhos Estim.',
-                            value: 'R\$ 4.2k',
-                            icon: Icons.trending_up,
-                            color: AppColors.mintGreen,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Consultas Hoje',
+                              value: '${_stats!['consultationsToday'] ?? 0}',
+                              icon: Icons.calendar_today,
+                              color: AppColors.accent,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Plantões',
-                            value: '1',
-                            icon: Icons.calendar_today,
-                            color: AppColors.purple400,
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Pendências',
+                              value: '${_stats!['pendingConsultations'] ?? 0}',
+                              icon: Icons.description,
+                              color: AppColors.warning,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Total Consultas',
+                              value: '${_stats!['totalConsultations'] ?? 0}',
+                              icon: Icons.medical_services,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 32),
                     // Chart Section
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.slate800.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.slate700),
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border, width: 1),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.trending_up, color: AppColors.mintGreen, size: 20),
-                              SizedBox(width: 8),
-                              Text(
+                              Icon(Icons.trending_up,
+                                  color: AppColors.primary, size: 20),
+                              const SizedBox(width: 12),
+                              const Text(
                                 'Volume de Atendimento',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: -0.3,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          DashboardChartWidget(
-                            data: const [
-                              {'name': 'Seg', 'total': 12},
-                              {'name': 'Ter', 'total': 19},
-                              {'name': 'Qua', 'total': 15},
-                              {'name': 'Qui', 'total': 22},
-                              {'name': 'Sex', 'total': 10},
-                            ],
-                          ),
+                          const SizedBox(height: 20),
+                          if (_stats != null && _stats!['consultationsByDay'] != null)
+                            DashboardChartWidget(
+                              data: (_stats!['consultationsByDay'] as List)
+                                  .map<Map<String, dynamic>>((day) => {
+                                    'name': (day['day'] ?? '').toString(),
+                                    'total': (day['count'] ?? 0) as int,
+                                  })
+                                  .toList(),
+                            )
+                          else
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
                     // Next Patients
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.slate800.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.slate700),
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border, width: 1),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.people, color: AppColors.electricBlue, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Próximos Pacientes',
+                              Icon(Icons.people,
+                                  color: AppColors.accent, size: 20),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Consultas Recentes',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: -0.3,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          _PatientItem(
-                            name: 'Ana Silva',
-                            lastVisit: '2024-05-10',
-                            nextAppointment: '14:30',
-                          ),
-                          const SizedBox(height: 12),
-                          _PatientItem(
-                            name: 'João Pereira',
-                            lastVisit: '2024-04-22',
-                            nextAppointment: '15:15',
-                          ),
-                          const SizedBox(height: 12),
-                          _PatientItem(
-                            name: 'Maria Santos',
-                            lastVisit: '2024-05-12',
-                            nextAppointment: '16:00',
-                          ),
+                          const SizedBox(height: 20),
+                          if (_stats != null && _stats!['recentConsultations'] != null)
+                            ...(_stats!['recentConsultations'] as List).take(3).map((consultation) {
+                              final patientName = consultation['patientName'] ?? 'Paciente Anônimo';
+                              final startedAt = DateTime.parse(consultation['startedAt']);
+                              final endedAt = consultation['endedAt'] != null 
+                                  ? DateTime.parse(consultation['endedAt']) 
+                                  : null;
+                              
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _PatientItem(
+                                  name: patientName,
+                                  lastVisit: _formatDate(startedAt),
+                                  nextAppointment: _formatTime(startedAt),
+                                  isFinished: endedAt != null,
+                                ),
+                              );
+                            }).toList(),
+                          if (_stats == null || (_stats!['recentConsultations'] as List).isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text(
+                                'Nenhuma consulta recente',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           const SizedBox(height: 16),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () => context.go('/clinical'),
                             child: const Text(
-                              'Ver agenda completa',
-                              style: TextStyle(color: AppColors.electricBlue),
+                              'Ver todas as consultas',
+                              style: TextStyle(color: AppColors.primary),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            BottomNavBar(currentRoute: '/dashboard'),
-          ],
+            ],
+          ),
         ),
       ),
-      floatingActionButton: const RecordingFAB(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Hoje';
+    } else if (difference.inDays == 1) {
+      return 'Ontem';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} dias atrás';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  String _formatTime(DateTime date) {
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -240,11 +338,11 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.slate800.withOpacity(0.5),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.slate700),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,25 +353,27 @@ class _StatCard extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.slateLight,
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               Icon(icon, color: color, size: 20),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.5,
             ),
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0, duration: 300.ms);
   }
 }
 
@@ -281,20 +381,23 @@ class _PatientItem extends StatelessWidget {
   final String name;
   final String lastVisit;
   final String nextAppointment;
+  final bool isFinished;
 
   const _PatientItem({
     required this.name,
     required this.lastVisit,
     required this.nextAppointment,
+    this.isFinished = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.slate900.withOpacity(0.5),
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -305,33 +408,43 @@ class _PatientItem extends StatelessWidget {
               Text(
                 name,
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Última: $lastVisit',
                 style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.slateLight,
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.electricBlue,
+              color: isFinished ? AppColors.success : AppColors.primary,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              nextAppointment,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isFinished) ...[
+                  const Icon(Icons.check_circle, size: 14, color: Colors.white),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  nextAppointment,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -339,4 +452,3 @@ class _PatientItem extends StatelessWidget {
     );
   }
 }
-

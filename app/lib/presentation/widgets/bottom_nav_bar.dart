@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/colors.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../core/theme/app_colors.dart';
 
 class BottomNavBar extends StatelessWidget {
   final String currentRoute;
@@ -11,43 +13,67 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.deepNavy.withOpacity(0.8),
+        color: AppColors.surface.withOpacity(0.8),
         border: const Border(
-          top: BorderSide(color: AppColors.slate700, width: 1),
+          top: BorderSide(color: AppColors.border, width: 1),
         ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.home,
-                label: 'Início',
-                route: '/dashboard',
-                isActive: currentRoute == '/dashboard',
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home,
+                      label: 'Início',
+                      route: '/dashboard',
+                      isActive: currentRoute == '/dashboard',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.people_outlined,
+                      activeIcon: Icons.people,
+                      label: 'Pacientes',
+                      route: '/patients',
+                      isActive: currentRoute.startsWith('/patients'),
+                    ),
+                  ),
+                  // Botão central destacado (círculo verde) - na mesma linha
+                  _RecordingButton(
+                    isActive: currentRoute.startsWith('/clinical'),
+                    onTap: () => context.go('/clinical/recording'),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.support_agent_outlined,
+                      activeIcon: Icons.support_agent,
+                      label: "IA's",
+                      route: '/support',
+                      isActive: currentRoute.startsWith('/support'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.business_outlined,
+                      activeIcon: Icons.business,
+                      label: 'Business',
+                      route: '/business',
+                      isActive: currentRoute.startsWith('/business'),
+                    ),
+                  ),
+                ],
               ),
-              _NavItem(
-                icon: Icons.medical_services,
-                label: 'Clínico',
-                route: '/clinical',
-                isActive: currentRoute.startsWith('/clinical'),
-              ),
-              const SizedBox(width: 64), // Space for FAB
-              _NavItem(
-                icon: Icons.support_agent,
-                label: 'Suporte',
-                route: '/support',
-                isActive: currentRoute.startsWith('/support'),
-              ),
-              _NavItem(
-                icon: Icons.business,
-                label: 'Business',
-                route: '/business',
-                isActive: currentRoute.startsWith('/business'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -57,12 +83,14 @@ class BottomNavBar extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
+  final IconData activeIcon;
   final String label;
   final String route;
   final bool isActive;
 
   const _NavItem({
     required this.icon,
+    required this.activeIcon,
     required this.label,
     required this.route,
     required this.isActive,
@@ -72,26 +100,80 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.go(route),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? AppColors.electricBlue : AppColors.slateLight,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isActive ? AppColors.electricBlue : AppColors.slateLight,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
+              color: isActive ? AppColors.primary : AppColors.textSecondary,
+              size: 20,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                color: isActive ? AppColors.primary : AppColors.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ).animate(target: isActive ? 1 : 0).scale(
+        duration: 200.ms,
+        begin: const Offset(0.9, 0.9),
       ),
     );
   }
 }
 
+class _RecordingButton extends StatelessWidget {
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _RecordingButton({
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: AppColors.success,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.success.withOpacity(0.4),
+              blurRadius: 12,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.mic,
+          color: Colors.white,
+          size: 24,
+        ),
+      ),
+    ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
+      duration: 1500.ms,
+      begin: const Offset(1.0, 1.0),
+      end: const Offset(1.05, 1.05),
+    );
+  }
+}

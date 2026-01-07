@@ -10,9 +10,41 @@ import '../../presentation/pages/support/support_chat_page.dart';
 import '../../presentation/pages/business/business_hub_page.dart';
 import '../../presentation/pages/business/drug_catalog_page.dart';
 import '../../presentation/pages/profile/profile_page.dart';
+import '../../presentation/pages/patients/patients_list_page.dart';
+import '../../presentation/pages/patients/patient_form_page.dart';
+import '../../presentation/pages/patients/patient_detail_page.dart';
+import '../../services/auth_service.dart';
+
+final _authService = AuthService();
 
 final appRouter = GoRouter(
   initialLocation: '/login',
+  redirect: (context, state) async {
+    try {
+      final isLoggedIn = await _authService.checkAuth();
+      final isGoingToLogin = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      
+      // Se não está logado e não está indo para login/register, redirecionar para login
+      if (!isLoggedIn && !isGoingToLogin) {
+        return '/login';
+      }
+      
+      // Se está logado e está indo para login/register, redirecionar para dashboard
+      if (isLoggedIn && isGoingToLogin) {
+        return '/dashboard';
+      }
+      
+      return null; // Não redirecionar
+    } catch (e) {
+      // Em caso de erro, permitir acesso (pode ser problema de rede)
+      // Mas redirecionar para login se não estiver indo para login/register
+      final isGoingToLogin = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      if (!isGoingToLogin) {
+        return '/login';
+      }
+      return null;
+    }
+  },
   routes: [
     // Auth routes
     GoRoute(
@@ -38,9 +70,20 @@ final appRouter = GoRouter(
       builder: (context, state) => const ClinicalRecordingPage(),
     ),
     GoRoute(
+      path: '/clinical/recording/:consultationId',
+      builder: (context, state) {
+        final consultationId = state.pathParameters['consultationId'];
+        return ClinicalRecordingPage(consultationId: consultationId);
+      },
+    ),
+    GoRoute(
       path: '/clinical/:id',
       builder: (context, state) {
         final id = state.pathParameters['id']!;
+        // Se o id for "recording", não é uma consulta válida
+        if (id == 'recording') {
+          return const ClinicalRecordingPage();
+        }
         return ClinicalDetailPage(consultationId: id);
       },
     ),
@@ -69,6 +112,29 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfilePage(),
+    ),
+    // Patient routes
+    GoRoute(
+      path: '/patients',
+      builder: (context, state) => const PatientsListPage(),
+    ),
+    GoRoute(
+      path: '/patients/new',
+      builder: (context, state) => const PatientFormPage(),
+    ),
+    GoRoute(
+      path: '/patients/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return PatientDetailPage(patientId: id);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:id/edit',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return PatientFormPage(patientId: id);
+      },
     ),
   ],
 );

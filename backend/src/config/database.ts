@@ -1,24 +1,27 @@
-import { DataSource } from 'typeorm';
-import { User } from '../models/User';
-import { Consultation } from '../models/Consultation';
-import { MedicalRecord } from '../models/MedicalRecord';
-import { SupportChat } from '../models/SupportChat';
-import { Transaction } from '../models/Transaction';
-import { Drug } from '../models/Drug';
+import { Pool } from 'pg';
 
-export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
+// Configuração do pool de conexões PostgreSQL
+const pool = new Pool({
+  host: process.env.DB_HOST || 'postgres',
   port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_DATABASE || 'medos_db',
-  synchronize: false, // NUNCA usar synchronize - usar migrações sempre
-  logging: process.env.NODE_ENV === 'development',
-  entities: [User, Consultation, MedicalRecord, SupportChat, Transaction, Drug],
-  migrations: ['src/migrations/**/*.ts'],
-  migrationsTableName: 'migrations',
-  migrationsRun: false, // Migrações devem ser executadas manualmente
-  subscribers: ['src/subscribers/**/*.ts'],
+  database: process.env.DB_NAME || 'medos_db',
+  user: process.env.DB_USER || 'medos_user',
+  password: process.env.DB_PASSWORD || 'medos_password',
+  max: 20, // Máximo de conexões no pool
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
+
+// Testar conexão na inicialização
+pool.on('connect', () => {
+  console.log('✅ Conectado ao PostgreSQL');
+});
+
+pool.on('error', (err) => {
+  console.error('❌ Erro inesperado no cliente PostgreSQL:', err);
+  process.exit(-1);
+});
+
+export default pool;
+
 

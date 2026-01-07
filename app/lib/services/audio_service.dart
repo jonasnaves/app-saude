@@ -1,99 +1,282 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:record/record.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'websocket_service.dart';
+import 'dart:js' as js;
+import 'package:flutter/foundation.dart';
+import 'whisper_transcription_service.dart';
+import 'gemini_analysis_service.dart';
+import 'cascade_analysis_service.dart';
+import 'api_service.dart';
+import '../data/datasources/clinical_datasource.dart';
 
 class AudioService {
-  final AudioRecorder _recorder = AudioRecorder();
-  final WebSocketService _wsService = WebSocketService();
-  bool _isRecording = false;
+  final WhisperTranscriptionService _transcription = WhisperTranscriptionService();
+  final GeminiAnalysisService _analysis = GeminiAnalysisService(ApiService());
+  final CascadeAnalysisService _cascadeAnalysis = CascadeAnalysisService(ApiService());
+  
   StreamController<Map<String, dynamic>>? _transcriptController;
-  Timer? _chunkTimer;
+  StreamSubscription<String>? _transcriptionSubscription;
+  Timer? _analysisCheckTimer;
+  
+  bool _isRecording = false;
+  String _fullTranscript = ''; // Transcrição completa persistente
+  String _currentAnamnesis = '';
+  String? _currentPrescription;
+  List<String> _currentSuggestedQuestions = [];
+  String _doctorNotes = ''; // Notas do médico
+  
+  // Controle de frequência de análise: 10 segundos E 200 caracteres
+  DateTime? _lastAnalysisTime;
+  int _lastAnalysisLength = 0;
+  static const int _analysisCharThreshold = 200;
+  static const int _analysisTimeThresholdSeconds = 10;
+  
+  // Controle de cascata: executa quando transcrição atinge tamanho mínimo
+  DateTime? _lastCascadeTime;
+  int _lastCascadeLength = 0;
+  static const int _cascadeCharThreshold = 200; // Mesmo threshold que análise incremental
+  static const int _cascadeTimeThresholdSeconds = 10; // Mesmo threshold que análise incremental
+  bool _isProcessingCascade = false;
+  
   String? _consultationId;
+  String? _patientId;
+  String? _patientName;
 
   bool get isRecording => _isRecording;
-
   Stream<Map<String, dynamic>>? get transcriptStream => _transcriptController?.stream;
-
-  Future<bool> requestPermission() async {
-    final status = await Permission.microphone.request();
-    return status.isGranted;
+  String? get consultationId => _consultationId;
+  String? get patientId => _patientId;
+  String? get patientName => _patientName;
+  String get fullTranscript => _fullTranscript;
+  
+  // Método para atualizar notas do médico
+  void updateDoctorNotes(String notes) {
+    _doctorNotes = notes;
   }
 
-  Future<void> startRecording() async {
+  Future<void> startRecording({String? patientId, String? anonymousPatientName, String? existingConsultationId}) async {
     if (_isRecording) return;
 
-    final hasPermission = await requestPermission();
-    if (!hasPermission) {
-      throw Exception('Permissão de microfone negada');
+    if (!kIsWeb) {
+      throw Exception('Transcrição em tempo real disponível apenas na web');
     }
-
-    // Obter token
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    if (token == null) {
-      throw Exception('Token de autenticação não encontrado');
-    }
-
-    // Conectar WebSocket
-    await _wsService.connect(token);
-
-    // Escutar mensagens do WebSocket
-    _transcriptController = StreamController<Map<String, dynamic>>.broadcast();
-    _wsService.messageStream?.listen((message) {
-      if (message['type'] == 'transcript') {
-        _transcriptController?.add(message);
-      } else if (message['type'] == 'started') {
-        _consultationId = message['consultationId'];
-      }
-    });
-
-    // Iniciar gravação
-    // Para web, o path pode ser null ou vazio
-    await _recorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: 16000,
-      ),
-      path: '', // Path vazio para web/streaming
-    );
-
-    // Iniciar sessão no backend
-    _wsService.startRecording();
 
     _isRecording = true;
+    // Não limpar _fullTranscript se estiver retomando uma consulta existente
+    if (existingConsultationId == null) {
+      _fullTranscript = '';
+      _currentAnamnesis = '';
+      _currentPrescription = null;
+      _currentSuggestedQuestions = [];
+    }
+    _lastAnalysisLength = 0;
+    _lastAnalysisTime = DateTime.now();
+    _lastCascadeLength = 0;
+    _lastCascadeTime = DateTime.now();
+    _isProcessingCascade = false;
+    _patientId = patientId;
+    _patientName = anonymousPatientName;
 
-    // Enviar chunks periodicamente usando stream de áudio
-    // Nota: O package record pode não ter stream direto, então usamos uma abordagem alternativa
-    // Enviando transcrição de texto quando disponível (o cliente pode fazer transcrição básica)
-    _chunkTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      if (!_isRecording) {
-        timer.cancel();
+    _transcriptController = StreamController<Map<String, dynamic>>.broadcast();
+
+    // Se já tem uma consulta existente, usar ela. Caso contrário, criar nova
+    if (existingConsultationId != null) {
+      _consultationId = existingConsultationId;
+      print('[AudioService] Retomando consulta existente: $existingConsultationId');
+      // Atualizar patientId mesmo ao retomar, caso tenha mudado
+      if (patientId != null) {
+        _patientId = patientId;
+      }
+      if (anonymousPatientName != null) {
+        _patientName = anonymousPatientName;
+      }
+    } else {
+      // Iniciar consulta no backend com patientId primeiro
+      print('[AudioService] Criando nova consulta - PatientId: $patientId, PatientName: $anonymousPatientName');
+      final ClinicalDataSource clinicalDataSource = ClinicalDataSource(ApiService());
+      final result = await clinicalDataSource.startRecording(
+        patientId: patientId,
+        anonymousPatientName: anonymousPatientName,
+      );
+      _consultationId = result['consultationId'];
+      _patientId = result['patientId'];
+      _patientName = result['patientName'];
+      print('[AudioService] Nova consulta criada: $_consultationId, PatientId retornado: $_patientId, PatientName retornado: $_patientName');
+    }
+    
+    // Iniciar transcrição Whisper - passar consultationId para evitar duplicação
+    await _transcription.startRecording(consultationId: _consultationId);
+
+    // Escutar transcrições (sempre recebe transcrição completa acumulada)
+    _transcriptionSubscription = _transcription.transcriptStream?.listen(
+      (transcript) {
+        _fullTranscript = transcript;
+        
+        // Enviar transcrição completa ao stream
+        _transcriptController?.add({
+          'type': 'transcript',
+          'transcript': _fullTranscript, // Sempre a transcrição completa
+          'analysis': null,
+          'shouldAnalyze': false,
+        });
+
+        // Verificar condições para análise incremental (10s E 200 chars)
+        _checkAnalysisConditions();
+        
+        // Verificar condições para cascata (10s E 200 chars)
+        _checkCascadeConditions();
+      },
+      onError: (error) {
+        _transcriptController?.addError(error);
+      },
+    );
+
+    // Iniciar timer para verificar condições de análise a cada segundo
+    _analysisCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_isRecording) {
+        _checkAnalysisConditions();
+      }
+    });
+  }
+
+  void _checkAnalysisConditions() {
+    if (!_isRecording || _fullTranscript.isEmpty) return;
+
+    final now = DateTime.now();
+    final timeSinceLastAnalysis = _lastAnalysisTime != null
+        ? now.difference(_lastAnalysisTime!).inSeconds
+        : _analysisTimeThresholdSeconds;
+    final charsSinceLastAnalysis = _fullTranscript.length - _lastAnalysisLength;
+
+    // Verificar se AMBAS condições são atendidas
+    final timeCondition = timeSinceLastAnalysis >= _analysisTimeThresholdSeconds;
+    final charCondition = charsSinceLastAnalysis >= _analysisCharThreshold;
+
+    if (timeCondition && charCondition) {
+      _triggerIncrementalAnalysis(_fullTranscript);
+    }
+  }
+
+  Future<void> _triggerIncrementalAnalysis(String transcript) async {
+    try {
+      // Verificar se ainda está gravando antes de fazer a análise
+      if (!_isRecording || _transcriptController == null) {
         return;
       }
 
-      try {
-        // Por enquanto, enviamos um placeholder
-        // Em produção, isso seria substituído por chunks de áudio reais
-        // ou transcrição feita no cliente usando speech_to_text
-      } catch (e) {
-        print('Error in chunk timer: $e');
+      final analysis = await _analysis.getIncrementalAnalysis(
+        transcript,
+        _currentAnamnesis.isEmpty ? null : _currentAnamnesis,
+      );
+
+      // Atualizar insights
+      _currentAnamnesis = analysis.anamnesis;
+      _currentPrescription = analysis.prescription;
+      _currentSuggestedQuestions = analysis.suggestedQuestions;
+
+      final streamData = {
+        'type': 'transcript',
+        'transcript': _fullTranscript, // Sempre a transcrição completa
+        'analysis': {
+          'anamnesis': analysis.anamnesis,
+          'prescription': analysis.prescription,
+          'suggestedQuestions': analysis.suggestedQuestions,
+        },
+        'shouldAnalyze': true,
+      };
+
+      _transcriptController?.add(streamData);
+      
+      // Atualizar timestamps e comprimento após análise completar
+      _lastAnalysisTime = DateTime.now();
+      _lastAnalysisLength = transcript.length;
+      
+    } catch (e) {
+      // Em caso de erro, ainda atualizamos os timestamps
+      // para evitar tentativas repetidas com o mesmo texto
+      _lastAnalysisTime = DateTime.now();
+      _lastAnalysisLength = transcript.length;
+      _transcriptController?.addError('Erro na análise incremental: $e');
+    }
+  }
+
+  void _checkCascadeConditions() {
+    if (!_isRecording || _fullTranscript.isEmpty || _isProcessingCascade) return;
+
+    final now = DateTime.now();
+    final timeSinceLastCascade = _lastCascadeTime != null
+        ? now.difference(_lastCascadeTime!).inSeconds
+        : _cascadeTimeThresholdSeconds;
+    final charsSinceLastCascade = _fullTranscript.length - _lastCascadeLength;
+
+    // Verificar se AMBAS condições são atendidas
+    final timeCondition = timeSinceLastCascade >= _cascadeTimeThresholdSeconds;
+    final charCondition = charsSinceLastCascade >= _cascadeCharThreshold;
+
+    print('[AudioService] Verificando condições de cascata: time=${timeSinceLastCascade}s (>=${_cascadeTimeThresholdSeconds}s), chars=$charsSinceLastCascade (>=${_cascadeCharThreshold})');
+    
+    if (timeCondition && charCondition) {
+      print('[AudioService] Condições atendidas! Disparando cascata...');
+      _triggerCascadeAnalysis(_fullTranscript, doctorNotes: _doctorNotes.isNotEmpty ? _doctorNotes : null);
+    }
+  }
+
+  Future<void> _triggerCascadeAnalysis(String transcript, {String? doctorNotes}) async {
+    try {
+      // Verificar se ainda está gravando antes de fazer a análise
+      if (!_isRecording || _transcriptController == null || _isProcessingCascade) {
+        print('[AudioService] Cascata não executada: isRecording=$_isRecording, controller=${_transcriptController != null}, processing=$_isProcessingCascade');
+        return;
       }
-    });
-  }
 
-  String _encodeAudioChunk(Uint8List data) {
-    // Converter PCM16 para base64
-    return base64Encode(data);
-  }
+      print('[AudioService] Iniciando análise em cascata. Transcript length: ${transcript.length}');
+      if (doctorNotes != null && doctorNotes.isNotEmpty) {
+        print('[AudioService] Incluindo notas do médico no contexto');
+      }
+      _isProcessingCascade = true;
 
-  // Método para enviar transcrição de texto (quando disponível no cliente)
-  void sendTextChunk(String text) {
-    if (_isRecording && _wsService.isConnected) {
-      _wsService.sendTextChunk(text);
+      // Processar através de todos os agentes em cascata (incluindo notas do médico)
+      final cascadeResult = await _cascadeAnalysis.processCascade(
+        transcript,
+        doctorNotes: doctorNotes,
+        consultationId: _consultationId,
+      );
+      
+      print('[AudioService] Cascata concluída:');
+      print('  - Summary: ${cascadeResult.summary.length} chars');
+      print('  - Anamnesis: ${cascadeResult.anamnesis.length} chars');
+      print('  - Prescription: ${cascadeResult.prescription?.length ?? 0} chars');
+      print('  - Suggested Medications: ${cascadeResult.suggestedMedications?.length ?? 0} chars');
+      print('  - Questions: ${cascadeResult.suggestedQuestions.length}');
+
+      // Enviar resultados da cascata ao stream
+      final streamData = {
+        'type': 'cascade',
+        'transcript': _fullTranscript,
+        'cascade': {
+          'summary': cascadeResult.summary,
+          'anamnesis': cascadeResult.anamnesis,
+          'prescription': cascadeResult.prescription,
+          'suggestedMedications': cascadeResult.suggestedMedications,
+          'suggestedQuestions': cascadeResult.suggestedQuestions,
+        },
+      };
+
+      print('[AudioService] Enviando dados da cascata para o stream');
+      _transcriptController?.add(streamData);
+      
+      // Atualizar timestamps e comprimento após cascata completar
+      _lastCascadeTime = DateTime.now();
+      _lastCascadeLength = transcript.length;
+      _isProcessingCascade = false;
+      
+    } catch (e, stackTrace) {
+      print('[AudioService] ERRO na análise em cascata: $e');
+      print('[AudioService] Stack trace: $stackTrace');
+      // Em caso de erro, ainda atualizamos os timestamps
+      // para evitar tentativas repetidas com o mesmo texto
+      _lastCascadeTime = DateTime.now();
+      _lastCascadeLength = transcript.length;
+      _isProcessingCascade = false;
+      _transcriptController?.addError('Erro na análise em cascata: $e');
     }
   }
 
@@ -101,22 +284,29 @@ class AudioService {
     if (!_isRecording) return;
 
     _isRecording = false;
-    _chunkTimer?.cancel();
-    
-    await _recorder.stop();
-    _wsService.stopRecording();
-    await _wsService.disconnect();
+    _analysisCheckTimer?.cancel();
+    _analysisCheckTimer = null;
+    _transcriptionSubscription?.cancel();
+    _transcriptionSubscription = null;
+    await _transcription.stopRecording();
     
     await _transcriptController?.close();
     _transcriptController = null;
-    _consultationId = null;
+    
+    _fullTranscript = '';
+    _currentAnamnesis = '';
+    _currentPrescription = null;
+    _currentSuggestedQuestions = [];
+    _lastAnalysisLength = 0;
+    _lastAnalysisTime = null;
+    _lastCascadeLength = 0;
+    _lastCascadeTime = null;
+    _isProcessingCascade = false;
   }
-
-  String? get consultationId => _consultationId;
 
   Future<void> dispose() async {
     await stopRecording();
-    await _recorder.dispose();
+    _transcription.dispose();
+    _analysisCheckTimer?.cancel();
   }
 }
-

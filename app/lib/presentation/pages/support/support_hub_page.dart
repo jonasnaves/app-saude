@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/colors.dart';
-import '../../widgets/bottom_nav_bar.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../widgets/app_layout.dart';
 
 class SupportHubPage extends StatefulWidget {
   const SupportHubPage({super.key});
@@ -11,127 +12,59 @@ class SupportHubPage extends StatefulWidget {
 }
 
 class _SupportHubPageState extends State<SupportHubPage> {
-  String _selectedMode = 'medical';
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.deepNavy,
-      appBar: AppBar(
-        title: const Text('Hub de Especialistas IA'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return AppLayout(
+      currentRoute: '/support',
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header minimalista
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: const Row(
                 children: [
-                  // Mode Selector
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.slate800,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _ModeButton(
-                            label: 'IA Médica',
-                            mode: 'medical',
-                            icon: Icons.psychology,
-                            isSelected: _selectedMode == 'medical',
-                            onTap: () => setState(() => _selectedMode = 'medical'),
-                          ),
-                        ),
-                        Expanded(
-                          child: _ModeButton(
-                            label: 'IA Jurídica',
-                            mode: 'legal',
-                            icon: Icons.gavel,
-                            isSelected: _selectedMode == 'legal',
-                            onTap: () => setState(() => _selectedMode = 'legal'),
-                          ),
-                        ),
-                        Expanded(
-                          child: _ModeButton(
-                            label: 'IA Marketing',
-                            mode: 'marketing',
-                            icon: Icons.campaign,
-                            isSelected: _selectedMode == 'marketing',
-                            onTap: () => setState(() => _selectedMode = 'marketing'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Chat Button
-                  ElevatedButton(
-                    onPressed: () => context.go('/support/chat/$_selectedMode'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.electricBlue,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Iniciar Conversa',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    'Hub de Especialistas IA',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.5,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          BottomNavBar(currentRoute: '/support'),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeButton extends StatelessWidget {
-  final String label;
-  final String mode;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ModeButton({
-    required this.label,
-    required this.mode,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.electricBlue : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: isSelected ? Colors.white : AppColors.slateLight),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.slateLight,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 24,
+                  crossAxisSpacing: 24,
+                  childAspectRatio: 0.75,
+                  children: [
+                    _AICard(
+                      label: 'IA Médica',
+                      mode: 'medical',
+                      icon: Icons.psychology,
+                      color: Colors.blue,
+                    ),
+                    _AICard(
+                      label: 'IA Jurídica',
+                      mode: 'legal',
+                      icon: Icons.gavel,
+                      color: Colors.green,
+                    ),
+                    _AICard(
+                      label: 'IA Marketing',
+                      mode: 'marketing',
+                      icon: Icons.campaign,
+                      color: Colors.purple,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -141,3 +74,68 @@ class _ModeButton extends StatelessWidget {
   }
 }
 
+class _AICard extends StatelessWidget {
+  final String label;
+  final String mode;
+  final IconData icon;
+  final Color color;
+
+  const _AICard({
+    required this.label,
+    required this.mode,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/support/chat/$mode'),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 40,
+            ),
+          ).animate().scale(
+                duration: 200.ms,
+                curve: Curves.easeOut,
+              ),
+          const SizedBox(height: 12),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms).slideY(
+          begin: 0.1,
+          end: 0,
+          duration: 300.ms,
+          curve: Curves.easeOut,
+        );
+  }
+}
