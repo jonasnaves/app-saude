@@ -3,28 +3,35 @@ import 'package:flutter/material.dart';
 /// Paleta de cores minimalista inspirada em ChatGPT, Grok e Gemini AI
 class AppColors {
   // Backgrounds - Estilo ChatGPT Dark
-  static const Color background = Color(0xFF0D1117); // GitHub dark / ChatGPT
-  static const Color surface = Color(0xFF161B22); // Cards
-  static const Color surfaceElevated = Color(0xFF1C2128); // Hover states
-  static const Color surfaceHover = Color(0xFF21262D); // Interactive hover
+  static const Color background = Color(0xFFF5F7FA); // Light minimalist background
+  static const Color surface = Color(0xFFFFFFFF); // Pure white surface
+  static const Color surfaceSoft = Color(0xFFF0F4F8); // Very light grey blue
+  static const Color surfaceGlass = Color(0xCCFFFFFF); // Glass effect white
+  static const Color surfaceHover = Color(0xFFF8FAFC);
 
   // Text - Hierarquia clara
-  static const Color textPrimary = Color(0xFFF0F6FC); // Texto principal
-  static const Color textSecondary = Color(0xFF8B949E); // Texto secundário
-  static const Color textTertiary = Color(0xFF6E7681); // Texto terciário
-  static const Color textDisabled = Color(0xFF484F58); // Texto desabilitado
+  static const Color textPrimary = Color(0xFF1F2937); // Dark grey text
+  static const Color textSecondary = Color(0xFF6B7280); // Medium grey
+  static const Color textTertiary = Color(0xFF9CA3AF); // Light grey
+  static const Color textDisabled = Color(0xFFD1D5DB);
 
   // Accents - Cores suaves e modernas
-  static const Color primary = Color(0xFF10A37F); // ChatGPT green
-  static const Color primaryHover = Color(0xFF0D8B6F);
-  static const Color primaryLight = Color(0xFF1A7F64);
-  static const Color accent = Color(0xFF3B82F6); // Blue accent
-  static const Color accentHover = Color(0xFF2563EB);
+  // Accents - Modern & Fresh
+  static const Color primary = Color(0xFF2563EB); // Vibrant Blue
+  static const Color primaryHover = Color(0xFF1D4ED8);
+  static const Color primaryLight = Color(0xFFDBEAFE); // Very light blue for backgrounds
+  static const Color accent = Color(0xFF10B981); // Emerald Green
+  static const Color accentHover = Color(0xFF059669);
 
   // Borders - Sutis e discretos
-  static const Color border = Color(0xFF30363D);
-  static const Color borderHover = Color(0xFF484F58);
-  static const Color borderFocus = Color(0xFF58A6FF);
+  // Borders - Very Subtle
+  static const Color border = Color(0xFFE5E7EB);
+  static const Color borderHover = Color(0xFFD1D5DB);
+  static const Color borderFocus = Color(0xFFBFDBFE);
+  
+  // Shadows - Soft & Diffused
+  static const Color shadowSoft = Color(0x1A000000); // 10% Black
+  static const Color shadowStrong = Color(0x33000000); // 20% Black
 
   // Status colors - Suaves
   static const Color success = Color(0xFF3FB950);
@@ -33,16 +40,17 @@ class AppColors {
   static const Color info = Color(0xFF58A6FF);
 
   // Gradients - Para efeitos sutis
+  // Gradients - Soft & Modern
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF10A37F), Color(0xFF0D8B6F)],
+    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
   );
 
-  static const LinearGradient accentGradient = LinearGradient(
+  static const LinearGradient surfaceGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+    colors: [Color(0xFFFFFFFF), Color(0xFFF8FAFC)],
   );
 
   // Cores específicas para funcionalidades (mantidas para compatibilidade)

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
+import 'modern/glass_container.dart';
 
 class BottomNavBar extends StatelessWidget {
   final String currentRoute;
@@ -11,69 +12,64 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.8),
-        border: const Border(
-          top: BorderSide(color: AppColors.border, width: 1),
-        ),
-      ),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: _NavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home,
-                      label: 'Início',
-                      route: '/dashboard',
-                      isActive: currentRoute == '/dashboard',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _NavItem(
-                      icon: Icons.people_outlined,
-                      activeIcon: Icons.people,
-                      label: 'Pacientes',
-                      route: '/patients',
-                      isActive: currentRoute.startsWith('/patients'),
-                    ),
-                  ),
-                  // Botão central destacado (círculo verde) - na mesma linha
-                  _RecordingButton(
-                    isActive: currentRoute.startsWith('/clinical'),
-                    onTap: () => context.go('/clinical/recording'),
-                  ),
-                  Expanded(
-                    child: _NavItem(
-                      icon: Icons.support_agent_outlined,
-                      activeIcon: Icons.support_agent,
-                      label: "IA's",
-                      route: '/support',
-                      isActive: currentRoute.startsWith('/support'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _NavItem(
-                      icon: Icons.business_outlined,
-                      activeIcon: Icons.business,
-                      label: 'Business',
-                      route: '/business',
-                      isActive: currentRoute.startsWith('/business'),
-                    ),
-                  ),
-                ],
+    return GlassContainer(
+      margin: const EdgeInsets.all(24),
+      borderRadius: BorderRadius.circular(32),
+      blur: 15,
+      opacity: 0.8,
+      border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
+                  label: 'Início',
+                  route: '/dashboard',
+                  isActive: currentRoute == '/dashboard',
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.people_outlined,
+                  activeIcon: Icons.people,
+                  label: 'Pacientes',
+                  route: '/patients',
+                  isActive: currentRoute.startsWith('/patients'),
+                ),
+              ),
+              // Botão central destacado (círculo verde) - na mesma linha
+              _RecordingButton(
+                isActive: currentRoute.startsWith('/clinical'),
+                onTap: () => context.go('/clinical/recording'),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.support_agent_outlined,
+                  activeIcon: Icons.support_agent,
+                  label: "IA's",
+                  route: '/support',
+                  isActive: currentRoute.startsWith('/support'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.business_outlined,
+                  activeIcon: Icons.business,
+                  label: 'Business',
+                  route: '/business',
+                  isActive: currentRoute.startsWith('/business'),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../core/constants/colors.dart';
+import '../../core/theme/app_colors.dart';
 
 class DashboardChartWidget extends StatelessWidget {
   final List<Map<String, dynamic>> data;
@@ -15,7 +15,7 @@ class DashboardChartWidget extends StatelessWidget {
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY: 25,
+          maxY: _calculateMaxY(),
           barTouchData: BarTouchData(
             enabled: false,
           ),
@@ -51,7 +51,7 @@ class DashboardChartWidget extends StatelessWidget {
                   return Text(
                     value.toInt().toString(),
                     style: const TextStyle(
-                      color: AppColors.slateLight,
+                      color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
                   );
@@ -87,10 +87,17 @@ class DashboardChartWidget extends StatelessWidget {
               barRods: [
                 BarChartRodData(
                   toY: (item['total'] as num).toDouble(),
-                  color: AppColors.primary,
-                  width: 20,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.7),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                  width: 24,
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(4),
+                    top: Radius.circular(8),
                   ),
                 ),
               ],
@@ -106,7 +113,6 @@ class DashboardChartWidget extends StatelessWidget {
     final maxValue = data
         .map((item) => (item['total'] as num).toDouble())
         .reduce((a, b) => a > b ? a : b);
-    // Arredondar para cima para o próximo múltiplo de 5
     return (maxValue / 5).ceil() * 5.0 + 5;
   }
 }

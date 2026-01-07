@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
+import 'modern/glass_container.dart';
 
 class SideNavBar extends StatelessWidget {
   final String currentRoute;
@@ -10,88 +11,99 @@ class SideNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 80,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          right: BorderSide(color: AppColors.border, width: 1),
-        ),
+    return GlassContainer(
+      borderRadius: const BorderRadius.only(
+        topRight: Radius.circular(30),
+        bottomRight: Radius.circular(30),
       ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            // Logo ou ícone principal
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
+      border: Border(
+        right: BorderSide(color: Colors.white.withOpacity(0.2), width: 1),
+      ),
+      child: SizedBox(
+        width: 80,
+        height: double.infinity,
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 24),
+              // Logo ou ícone principal
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.medical_services,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              child: const Icon(
-                Icons.medical_services,
-                color: AppColors.textPrimary,
-                size: 24,
+              const SizedBox(height: 32),
+              // Menu items
+              Expanded(
+                child: Column(
+                  children: [
+                    _SideNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home,
+                      route: '/dashboard',
+                      isActive: currentRoute == '/dashboard',
+                      tooltip: 'Início',
+                    ),
+                    const SizedBox(height: 16),
+                    _SideNavItem(
+                      icon: Icons.people_outlined,
+                      activeIcon: Icons.people,
+                      route: '/patients',
+                      isActive: currentRoute.startsWith('/patients'),
+                      tooltip: 'Pacientes',
+                    ),
+                    const SizedBox(height: 16),
+                    _SideNavItem(
+                      icon: Icons.medical_services_outlined,
+                      activeIcon: Icons.medical_services,
+                      route: '/clinical',
+                      isActive: currentRoute.startsWith('/clinical'),
+                      tooltip: 'Clínico',
+                    ),
+                    const SizedBox(height: 16),
+                    _SideNavItem(
+                      icon: Icons.support_agent_outlined,
+                      activeIcon: Icons.support_agent,
+                      route: '/support',
+                      isActive: currentRoute.startsWith('/support'),
+                      tooltip: "IA's",
+                    ),
+                    const SizedBox(height: 16),
+                    _SideNavItem(
+                      icon: Icons.business_outlined,
+                      activeIcon: Icons.business,
+                      route: '/business',
+                      isActive: currentRoute.startsWith('/business'),
+                      tooltip: 'Business',
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            // Menu items
-            Expanded(
-              child: Column(
-                children: [
-                  _SideNavItem(
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home,
-                    route: '/dashboard',
-                    isActive: currentRoute == '/dashboard',
-                    tooltip: 'Início',
-                  ),
-                  const SizedBox(height: 16),
-                  _SideNavItem(
-                    icon: Icons.people_outlined,
-                    activeIcon: Icons.people,
-                    route: '/patients',
-                    isActive: currentRoute.startsWith('/patients'),
-                    tooltip: 'Pacientes',
-                  ),
-                  const SizedBox(height: 16),
-                  _SideNavItem(
-                    icon: Icons.medical_services_outlined,
-                    activeIcon: Icons.medical_services,
-                    route: '/clinical',
-                    isActive: currentRoute.startsWith('/clinical'),
-                    tooltip: 'Clínico',
-                  ),
-                  const SizedBox(height: 16),
-                  _SideNavItem(
-                    icon: Icons.support_agent_outlined,
-                    activeIcon: Icons.support_agent,
-                    route: '/support',
-                    isActive: currentRoute.startsWith('/support'),
-                    tooltip: "IA's",
-                  ),
-                  const SizedBox(height: 16),
-                  _SideNavItem(
-                    icon: Icons.business_outlined,
-                    activeIcon: Icons.business,
-                    route: '/business',
-                    isActive: currentRoute.startsWith('/business'),
-                    tooltip: 'Business',
-                  ),
-                ],
+              // Botão de gravação centralizado
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                child: _RecordingButton(
+                  isActive: currentRoute.startsWith('/clinical'),
+                  onTap: () => context.go('/clinical/recording'),
+                ),
               ),
-            ),
-            // Botão de gravação centralizado
-            Container(
-              margin: const EdgeInsets.only(bottom: 24),
-              child: _RecordingButton(
-                isActive: currentRoute.startsWith('/clinical'),
-                onTap: () => context.go('/clinical/recording'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

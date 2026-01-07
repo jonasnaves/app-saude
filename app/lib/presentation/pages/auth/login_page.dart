@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../widgets/modern/modern_card.dart';
 import '../../../data/datasources/auth_datasource.dart';
 import '../../../services/api_service.dart';
 
@@ -91,22 +92,19 @@ class _LoginPageState extends State<LoginPage> {
                       textAlign: TextAlign.center,
                     ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
                     const SizedBox(height: 48),
-                    // Card centralizado
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border, width: 1),
-                      ),
+                    // Card centralizado com Soft UI
+                    ModernCard(
+                      padding: const EdgeInsets.all(40),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           TextFormField(
                             controller: _emailController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Email',
-                              prefixIcon: Icon(Icons.email_outlined, size: 20),
+                              prefixIcon: Icon(Icons.email_outlined, size: 22, color: AppColors.primary.withOpacity(0.7)),
+                              filled: true,
+                              fillColor: AppColors.surfaceHover,
                             ),
                             style: const TextStyle(color: AppColors.textPrimary),
                             keyboardType: TextInputType.emailAddress,
@@ -120,12 +118,14 @@ class _LoginPageState extends State<LoginPage> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                           TextFormField(
                             controller: _passwordController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Senha',
-                              prefixIcon: Icon(Icons.lock_outlined, size: 20),
+                              prefixIcon: Icon(Icons.lock_outlined, size: 22, color: AppColors.primary.withOpacity(0.7)),
+                              filled: true,
+                              fillColor: AppColors.surfaceHover,
                             ),
                             style: const TextStyle(color: AppColors.textPrimary),
                             obscureText: true,
@@ -139,24 +139,24 @@ class _LoginPageState extends State<LoginPage> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 32),
                           ElevatedButton(
                             onPressed: _isLoading ? null : _handleLogin,
                             child: _isLoading
                                 ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
+                                    height: 24,
+                                    width: 24,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                                      strokeWidth: 2.5,
                                       valueColor:
-                                          AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
+                                          AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
                                   )
                                 : const Text('Entrar'),
                           ),
                         ],
                       ),
-                    ).animate().fadeIn(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1, end: 0),
+                    ).animate().fadeIn(duration: 600.ms, delay: 200.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuad),
                     const SizedBox(height: 24),
                     TextButton(
                       onPressed: () => context.go('/register'),

@@ -18,7 +18,7 @@ class AiMeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'AiMe',
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.softTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );

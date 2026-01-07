@@ -6,6 +6,7 @@ import '../../../data/datasources/dashboard_datasource.dart';
 import '../../../services/api_service.dart';
 import '../../widgets/app_layout.dart';
 import '../../widgets/dashboard_chart_widget.dart';
+import '../../widgets/modern/modern_card.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -179,20 +180,23 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                     const SizedBox(height: 32),
                     // Chart Section
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border, width: 1),
-                      ),
+                    // Chart Section
+                    ModernCard(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.trending_up,
-                                  color: AppColors.primary, size: 20),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.trending_up,
+                                    color: AppColors.primary, size: 20),
+                              ),
                               const SizedBox(width: 12),
                               const Text(
                                 'Volume de Atendimento',
@@ -205,7 +209,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                           if (_stats != null && _stats!['consultationsByDay'] != null)
                             DashboardChartWidget(
                               data: (_stats!['consultationsByDay'] as List)
@@ -227,20 +231,23 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     const SizedBox(height: 24),
                     // Next Patients
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border, width: 1),
-                      ),
+                    // Next Patients
+                    ModernCard(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.people,
-                                  color: AppColors.accent, size: 20),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.people,
+                                    color: AppColors.accent, size: 20),
+                              ),
                               const SizedBox(width: 12),
                               const Text(
                                 'Consultas Recentes',
@@ -253,7 +260,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                           if (_stats != null && _stats!['recentConsultations'] != null)
                             ...(_stats!['recentConsultations'] as List).take(3).map((consultation) {
                               final patientName = consultation['patientName'] ?? 'Paciente Anônimo';
@@ -337,13 +344,10 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+  @override
+  Widget build(BuildContext context) {
+    return ModernCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 1),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -358,10 +362,17 @@ class _StatCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              Icon(icon, color: color, size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             value,
             style: const TextStyle(
@@ -374,6 +385,7 @@ class _StatCard extends StatelessWidget {
         ],
       ),
     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0, duration: 300.ms);
+  }
   }
 }
 
@@ -396,8 +408,7 @@ class _PatientItem extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border, width: 1),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -426,22 +437,22 @@ class _PatientItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isFinished ? AppColors.success : AppColors.primary,
-              borderRadius: BorderRadius.circular(8),
+              color: isFinished ? AppColors.success.withOpacity(0.15) : AppColors.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isFinished) ...[
-                  const Icon(Icons.check_circle, size: 14, color: Colors.white),
+                  Icon(Icons.check_circle, size: 14, color: AppColors.success),
                   const SizedBox(width: 4),
                 ],
                 Text(
                   nextAppointment,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: isFinished ? AppColors.success : AppColors.primary,
                   ),
                 ),
               ],
