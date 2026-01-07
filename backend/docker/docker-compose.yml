@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: medos_user
       POSTGRES_PASSWORD: medos_password
     ports:
-      - "5432:5432"
+      - "5437:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../migrations/sql:/docker-entrypoint-initdb.d
@@ -24,10 +24,11 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    container_name: medos-backend
     ports:
-      - "3000:3000"
+      - "3003:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3000
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DATABASE_URL=postgresql://medos_user:medos_password@postgres:5432/medos_db
@@ -36,17 +37,22 @@ services:
       - DB_NAME=medos_db
       - DB_USER=medos_user
       - DB_PASSWORD=medos_password
+      - DB_USERNAME=${DB_USERNAME:-medos_user}
+      - DB_PASSWORD=${DB_PASSWORD:-medos_password}
+      - DB_DATABASE=${DB_DATABASE:-medos_db}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN:-30d}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     env_file:
       - ../.env
-    volumes:
-      - ../src:/app/src
-      # Não montar node_modules como volume para evitar conflitos
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
@@ -54,4 +60,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-

@@ -2,8 +2,8 @@ class ApiConstants {
   // Base URL - ajustar conforme ambiente
   // Para desenvolvimento local com Docker: localhost:3000
   // Para produção: alterar para URL do servidor
-  static const String baseUrl = 'http://localhost:3000/api';
-  static const String wsUrl = 'ws://localhost:3000/api/clinical/ws';
+  static const String baseUrl = 'http://195.35.16.183:3003/api';
+  static const String wsUrl = 'ws://195.35.16.183:3003/api/clinical/ws';
   
   // Auth endpoints
   static const String login = '/auth/login';
