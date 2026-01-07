@@ -96,6 +96,7 @@ export const login = async (req: Request, res: Response) => {
     // Para requisições cross-origin, precisamos usar sameSite: 'none' e secure: false em dev
     // Em produção com HTTPS, usar secure: true
     const isProduction = process.env.NODE_ENV === 'production';
+    const isDevelopment = !isProduction;
     const origin = req.headers.origin || '';
     const isCrossOrigin = origin && !origin.includes('localhost') && !origin.includes('127.0.0.1');
     
@@ -110,8 +111,8 @@ export const login = async (req: Request, res: Response) => {
     
     console.log('[Auth] Cookie definido:', { 
       sessionToken: sessionToken.substring(0, 10) + '...',
-      sameSite: isDevelopment ? 'lax' : 'none',
-      secure: false,
+      sameSite: isCrossOrigin ? 'none' : 'lax',
+      secure: isProduction,
     });
 
     res.json({

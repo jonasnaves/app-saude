@@ -16,6 +16,10 @@ class AuthDataSource {
       },
     );
 
+    print('[AuthDataSource] Status code: ${response.statusCode}');
+    print('[AuthDataSource] Response data type: ${response.data.runtimeType}');
+    print('[AuthDataSource] Response data: $response.data');
+
     // Verificar se a resposta foi bem-sucedida
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Erro ao fazer login: ${response.statusMessage ?? 'Erro desconhecido'}');
@@ -41,8 +45,14 @@ class AuthDataSource {
     final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
     
     // Armazenar sessionToken se fornecido
+    print('[AuthDataSource] Resposta do login: ${data.keys.toList()}');
     if (data['sessionToken'] != null) {
+      print('[AuthDataSource] Token recebido do backend: ${(data['sessionToken'] as String).substring(0, 10)}...');
       await apiService.setSessionToken(data['sessionToken'] as String);
+      print('[AuthDataSource] Token salvo no ApiService');
+    } else {
+      print('[AuthDataSource] ERRO: sessionToken não encontrado na resposta do login!');
+      print('[AuthDataSource] Dados recebidos: $data');
     }
 
     return {
