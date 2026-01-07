@@ -10,9 +10,11 @@ class ApiService {
   late Dio _dio;
   String? _sessionToken;
   bool _tokenLoaded = false;
-  final Future<void> _tokenLoadFuture;
+  late final Future<void> _tokenLoadFuture;
 
-  ApiService() : _tokenLoadFuture = _loadSessionToken() {
+  ApiService() {
+    _tokenLoadFuture = _loadSessionToken();
+    
     _dio = Dio(BaseOptions(
       baseUrl: ApiConstants.baseUrl,
       headers: {
