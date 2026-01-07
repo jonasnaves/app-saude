@@ -8,6 +8,7 @@ class AppColors {
   static const Color surfaceSoft = Color(0xFFF0F4F8); // Very light grey blue
   static const Color surfaceGlass = Color(0xCCFFFFFF); // Glass effect white
   static const Color surfaceHover = Color(0xFFF8FAFC);
+  static const Color surfaceElevated = surface; // Compatibility alias
 
   // Text - Hierarquia clara
   static const Color textPrimary = Color(0xFF1F2937); // Dark grey text

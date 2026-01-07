@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 
 class ModernCard extends StatelessWidget {
   final Widget child;
@@ -9,7 +9,6 @@ class ModernCard extends StatelessWidget {
   final double? width;
   final double? height;
   final VoidCallback? onTap;
-  final bool animate;
 
   const ModernCard({
     super.key,
@@ -20,7 +19,6 @@ class ModernCard extends StatelessWidget {
     this.width,
     this.height,
     this.onTap,
-    this.animate = true,
   });
 
   @override

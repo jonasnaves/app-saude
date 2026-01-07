@@ -344,8 +344,6 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  @override
-  Widget build(BuildContext context) {
     return ModernCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -385,7 +383,6 @@ class _StatCard extends StatelessWidget {
         ],
       ),
     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0, duration: 300.ms);
-  }
   }
 }
 
